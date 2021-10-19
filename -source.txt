@@ -1,2 +1,6 @@
 # Git Source
 https://github.com/reedbarger/amplifyagora
+
+# Amplify 
+amplify init
+amplify add api
