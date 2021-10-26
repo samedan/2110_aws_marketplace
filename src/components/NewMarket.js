@@ -76,6 +76,28 @@ class NewMarket extends React.Component {
                   className="market-title-button"
                 />
               </h1>
+
+              <Form inline={true} onSubmit={this.props.handleSearch}>
+                <Form.Item>
+                  <Input
+                    value={this.props.searchTerm}
+                    onChange={this.props.handleSearchChange}
+                    onIconClick={this.props.handleClearSearch}
+                    placeholder="Search Markets..."
+                    icon="circle-cross"
+                  />
+                </Form.Item>
+                <Form.Item>
+                  <Button
+                    onClick={this.props.handleSearch}
+                    type="info"
+                    icon="search"
+                    loading={this.props.isSearching}
+                  >
+                    Search
+                  </Button>
+                </Form.Item>
+              </Form>
             </div>
             <Dialog
               title="Create New Market"

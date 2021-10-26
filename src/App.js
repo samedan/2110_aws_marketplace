@@ -82,7 +82,7 @@ class App extends React.Component {
                 exact
                 path="/markets/:marketId"
                 component={({ match }) => (
-                  <MarketPage marketId={match.params.marketId} />
+                  <MarketPage marketId={match.params.marketId} user={user} />
                 )}
               />
             </div>

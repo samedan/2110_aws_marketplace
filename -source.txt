@@ -8,3 +8,7 @@ amplify add api
 #Users 
 xtzlocvvnszmatpxfq@adfskj.com
 
+https://docs.amplify.aws/lib/q/platform/js/
+
+# Amplify Update Schema
+amplify push command
