@@ -1,12 +1,179 @@
 import React from "react";
 // prettier-ignore
-// import { Notification, Popover, Button, Dialog, Card, Form, Input, Radio } from "element-react";
+import { Notification, Popover, Button, Dialog, Card, Form, Input, Radio } from "element-react";
+import { S3Image } from "aws-amplify-react";
+import { convertCentsToDollars, convertDollarsToCents } from "../utils";
+import { UserContext } from "../App";
+import PayButton from "./PayButton";
+import EmailedIcon from "../assets/emailed.svg";
+import ShippedIcon from "../assets/shipped.svg";
+import { updateProduct } from "../graphql/mutations";
+import { API, graphqlOperation } from "aws-amplify";
 
 class Product extends React.Component {
-  state = {};
-  
+  state = {
+    updateProductDialog: false,
+    description: "",
+    price: "",
+    shipped: false,
+  };
+
+  handleUpdateProduct = async (productId) => {
+    try {
+      this.setState({ updateProductDialog: false });
+      const { description, price, shipped } = this.state;
+      const input = {
+        id: productId,
+        description,
+        shipped,
+        price: convertDollarsToCents(price),
+      };
+      const result = await API.graphql(
+        graphqlOperation(updateProduct, { input })
+      );
+      console.log(result);
+      Notification({
+        title: "Success",
+        type: "Success",
+        message: "Product Successfully updated",
+      });
+    } catch (error) {
+      console.error(error);
+    }
+  };
   render() {
-    return <div>Product</div>
+    const { product } = this.props;
+    const { updateProductDialog, description, price, shipped } = this.state;
+    return (
+      <UserContext.Consumer>
+        {({ user }) => {
+          const isProductOwner = user && user.attributes.sub === product.owner;
+          return (
+            <div className="card-container">
+              <Card bodyStyle={{ padding: 0, minWidth: "200px" }}>
+                <S3Image
+                  imgKey={product.file.key}
+                  theme={{
+                    photoImg: {
+                      maxWidth: "100%",
+                      maxHeight: "100%",
+                    },
+                  }}
+                />
+                <div className="card-body">
+                  <h3 className="m-0">{product.description}</h3>
+                  <div className="items-center">
+                    <img
+                      src={product.shipped ? ShippedIcon : EmailedIcon}
+                      alt="Shipping Icon"
+                      className="icon shipping-icon"
+                    />
+                    {product.shipped ? "Shipped" : "Emailed"}
+                  </div>
+                  <div className="text-right">
+                    <span className="mx-1">
+                      ${convertCentsToDollars(product.price)}
+                    </span>
+                    {!isProductOwner && <PayButton />}
+                  </div>
+                </div>
+              </Card>
+              {/* Update / delete Porduct Buttons */}
+              <div className="text-center">
+                {isProductOwner && (
+                  <>
+                    <Button
+                      type="warning"
+                      icon="edit"
+                      className="m-1"
+                      onClick={() =>
+                        this.setState({
+                          updateProductDialog: true,
+                        })
+                      }
+                    />
+                    <Button type="danger" icon="delete" />
+                  </>
+                )}
+              </div>
+              {/* Update product Dialog */}
+              <Dialog
+                title="Update product"
+                size="large"
+                customClass="dialog"
+                visible={updateProductDialog}
+                onCancel={() =>
+                  this.setState({
+                    updateProductDialog: false,
+                    description: product.description,
+                    shipped: product.shipped,
+                    price: convertCentsToDollars(product.price),
+                  })
+                }
+              >
+                <Dialog.Body>
+                  <Form lablePosition="top">
+                    <Form.Item label="Update Description">
+                      <Input
+                        icon="information"
+                        trim={true}
+                        placeholder="Description"
+                        value={description}
+                        onChange={(description) =>
+                          this.setState({ description })
+                        }
+                      />
+                    </Form.Item>
+                    <Form.Item label="Set Product Price">
+                      <Input
+                        type="number"
+                        icon="plus"
+                        placeholder="Price ($USD)"
+                        value={price}
+                        onChange={(price) => this.setState({ price })}
+                      />
+                    </Form.Item>
+                    <Form.Item label="is the product Shipped or Emailed to the Customer?">
+                      <div className="text-center">
+                        <Radio
+                          value="true"
+                          checked={shipped === true}
+                          onChange={() => this.setState({ shipped: true })}
+                        >
+                          Shipped
+                        </Radio>
+                        <Radio
+                          value="false"
+                          checked={shipped === false}
+                          onChange={() => this.setState({ shipped: false })}
+                        >
+                          Emailed
+                        </Radio>
+                      </div>
+                    </Form.Item>
+                  </Form>
+                </Dialog.Body>
+                <Dialog.Footer>
+                  <Button
+                    onClick={() =>
+                      this.setState({ updateProductDialog: false })
+                    }
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="primary"
+                    onClick={() => this.handleUpdateProduct(product.id)}
+                  >
+                    Update
+                  </Button>
+                </Dialog.Footer>
+              </Dialog>
+            </div>
+          );
+        }}
+      </UserContext.Consumer>
+    );
   }
 }
 
