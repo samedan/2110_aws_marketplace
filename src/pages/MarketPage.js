@@ -1,10 +1,16 @@
 import React from "react";
 import { Loading, Tabs, Icon } from "element-react";
+import {
+  onCreateProduct,
+  onUpdateProduct,
+  onDeleteProduct,
+} from "../graphql/subscriptions";
 // import { getMarket } from "../graphql/queries";
 import API, { graphqlOperation } from "@aws-amplify/api";
 import { Link } from "react-router-dom";
 import NewProduct from "../components/NewProduct";
 import Product from "../components/Product";
+import { updateProduct } from "../graphql/mutations";
 
 const getMarket = `
   query GetMarket($id: ID!) {
@@ -43,6 +49,74 @@ class MarketPage extends React.Component {
 
   componentDidMount() {
     this.handleGetMarket();
+    const { user } = this.props;
+    console.log(user);
+    // CREATE SUBSCRIPTION
+    this.createProductListener = API.graphql(
+      graphqlOperation(onCreateProduct, { owner: user.username })
+    ).subscribe({
+      next: (productData) => {
+        const createdProduct = productData.value.data.onCreateProduct;
+        // separate createdProdcut from the previous products
+        const prevProducts = this.state.market.products.items.filter(
+          (item) => item.id !== createdProduct.id
+        );
+        // new []
+        const updatedProducts = [createdProduct, ...prevProducts];
+        // shallow copy/clone of our market
+        const market = { ...this.state.market };
+        market.products.items = updatedProducts;
+        this.setState({ market });
+      },
+    });
+    // UPDATE SUBSCRIPTION
+    this.updateProductListener = API.graphql(
+      graphqlOperation(onUpdateProduct, { owner: user.username })
+    ).subscribe({
+      next: (productData) => {
+        const updatedProduct = productData.value.data.onUpdateProduct;
+        // put it back in its position in the original []
+        const updatedProductIndex = this.state.market.products.items.findIndex(
+          (item) => item.id === updatedProduct.id
+        );
+        const updatedProducts = [
+          // [ , , , Index,
+          ...this.state.market.products.items.slice(0, updatedProductIndex),
+          updatedProduct,
+          // till the end index -> ,,,]
+          ...this.state.market.products.items.slice(updatedProductIndex + 1),
+        ];
+        console.log(updatedProducts);
+        // shallow copy/clone of our market
+        const market = { ...this.state.market };
+        console.log(market.products.items);
+        market.products.items = updatedProducts;
+        console.log(market.products.items);
+        this.setState({ market });
+      },
+    });
+    // DELETE SUBSCRIPTION
+    this.deleteProductListener = API.graphql(
+      graphqlOperation(onDeleteProduct, { owner: user.username })
+    ).subscribe({
+      next: (productData) => {
+        const deletedProduct = productData.value.data.onDeleteProduct;
+        // separate createdProdcut from the previous products
+        const updatedProducts = this.state.market.products.items.filter(
+          (item) => item.id !== deletedProduct.id
+        );
+        // shallow copy/clone of our market
+        const market = { ...this.state.market };
+        market.products.items = updatedProducts;
+        this.setState({ market });
+      },
+    });
+  }
+
+  componentWillUnmount() {
+    this.createProductListener.unsubscribe();
+    this.updateProductListener.unsubscribe();
+    this.deleteProductListener.unsubscribe();
   }
 
   handleGetMarket = async () => {

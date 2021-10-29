@@ -7,18 +7,20 @@ import { UserContext } from "../App";
 import PayButton from "./PayButton";
 import EmailedIcon from "../assets/emailed.svg";
 import ShippedIcon from "../assets/shipped.svg";
-import { updateProduct } from "../graphql/mutations";
+import { updateProduct, deleteProduct } from "../graphql/mutations";
 import { API, graphqlOperation } from "aws-amplify";
 
 class Product extends React.Component {
   state = {
     updateProductDialog: false,
+    deleteProductDialog: false,
     description: "",
     price: "",
     shipped: false,
   };
 
   handleUpdateProduct = async (productId) => {
+    console.log(productId);
     try {
       this.setState({ updateProductDialog: false });
       const { description, price, shipped } = this.state;
@@ -28,22 +30,52 @@ class Product extends React.Component {
         shipped,
         price: convertDollarsToCents(price),
       };
+      console.log(input);
       const result = await API.graphql(
         graphqlOperation(updateProduct, { input })
       );
       console.log(result);
       Notification({
         title: "Success",
-        type: "Success",
+        type: "success",
         message: "Product Successfully updated",
+        duration: 2000,
       });
+      // reload the page
+      // setTimeout(() => window.location.reload(), 2000);
     } catch (error) {
       console.error(error);
     }
   };
+
+  handleDeleteProduct = async (productId) => {
+    try {
+      this.setState({ deleteProductDialog: false });
+      const input = {
+        id: productId,
+      };
+      await API.graphql(graphqlOperation(deleteProduct, { input }));
+      Notification({
+        title: "Success",
+        type: "success",
+        message: "Product Successfully deleted",
+        duration: 2000,
+      });
+      // reload the page
+      // setTimeout(() => window.location.reload(), 2000);
+    } catch (error) {
+      console.error(`Failed to delete product with id ${productId}`, error);
+    }
+  };
   render() {
     const { product } = this.props;
-    const { updateProductDialog, description, price, shipped } = this.state;
+    const {
+      updateProductDialog,
+      description,
+      price,
+      shipped,
+      deleteProductDialog,
+    } = this.state;
     return (
       <UserContext.Consumer>
         {({ user }) => {
@@ -89,14 +121,62 @@ class Product extends React.Component {
                       onClick={() =>
                         this.setState({
                           updateProductDialog: true,
+                          description: product.description,
+                          shipped: product.shipped,
+                          price: convertCentsToDollars(product.price),
                         })
                       }
                     />
-                    <Button type="danger" icon="delete" />
+                    {/* --------------------- */}
+                    {/* Delete product Dialog */}
+                    {/* --------------------- */}
+                    <Popover
+                      placement="top"
+                      width="160"
+                      trigger="click"
+                      visible={deleteProductDialog}
+                      content={
+                        <>
+                          <p>Dp you want to delete this product?</p>
+                          <div className="text-right">
+                            <Button
+                              size="mini"
+                              type="text"
+                              className="m-1"
+                              onClick={() =>
+                                this.setState({ deleteProductDialog: false })
+                              }
+                            >
+                              Cancel
+                            </Button>
+                            <Button
+                              type="primary"
+                              size="mini"
+                              className="m-1"
+                              onClick={() =>
+                                this.handleDeleteProduct(product.id)
+                              }
+                            >
+                              Confirm
+                            </Button>
+                          </div>
+                        </>
+                      }
+                    >
+                      <Button
+                        type="danger"
+                        icon="delete"
+                        onClick={() =>
+                          this.setState({ deleteProductDialog: true })
+                        }
+                      />
+                    </Popover>
                   </>
                 )}
               </div>
+              {/* --------------------- */}
               {/* Update product Dialog */}
+              {/* --------------------- */}
               <Dialog
                 title="Update product"
                 size="large"
@@ -105,14 +185,11 @@ class Product extends React.Component {
                 onCancel={() =>
                   this.setState({
                     updateProductDialog: false,
-                    description: product.description,
-                    shipped: product.shipped,
-                    price: convertCentsToDollars(product.price),
                   })
                 }
               >
                 <Dialog.Body>
-                  <Form lablePosition="top">
+                  <Form labelPosition="top">
                     <Form.Item label="Update Description">
                       <Input
                         icon="information"
@@ -124,7 +201,7 @@ class Product extends React.Component {
                         }
                       />
                     </Form.Item>
-                    <Form.Item label="Set Product Price">
+                    <Form.Item label="Update Price">
                       <Input
                         type="number"
                         icon="plus"
@@ -133,7 +210,7 @@ class Product extends React.Component {
                         onChange={(price) => this.setState({ price })}
                       />
                     </Form.Item>
-                    <Form.Item label="is the product Shipped or Emailed to the Customer?">
+                    <Form.Item label="Update Shipping">
                       <div className="text-center">
                         <Radio
                           value="true"
