@@ -50,7 +50,7 @@ class MarketPage extends React.Component {
   componentDidMount() {
     this.handleGetMarket();
     const { user } = this.props;
-    console.log(user);
+    // console.log(user);
     // CREATE SUBSCRIPTION
     this.createProductListener = API.graphql(
       graphqlOperation(onCreateProduct, { owner: user.username })

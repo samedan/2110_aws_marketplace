@@ -13,3 +13,6 @@ https://docs.amplify.aws/lib/q/platform/js/
 
 # Amplify Update Schema
 amplify push command
+
+# Install Lambda dependencies
+amplify function build
