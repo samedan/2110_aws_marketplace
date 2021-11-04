@@ -1,3 +1,4 @@
+// /amplify/backend/api/function/orderlambda/src/app.js
 var express = require("express");
 var bodyParser = require("body-parser");
 var awsServerlessExpressMiddleware = require("aws-serverless-express/middleware");
@@ -7,10 +8,10 @@ var AWS = require("aws-sdk");
 
 // config {} from email
 const config = {
-  accessKeyId: "AKIARAGIPBV7NC4IHFW7",
-  secretAccessKey: "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",
-  region: "eu-west-1",
-  adminEmail: "dpopescu@adelanto.fr",
+  accessKeyId: "",
+  secretAccessKey: "",
+  region: "",
+  adminEmail: "",
 };
 
 // Email sending with SES = Amazon Very Simple email Service
