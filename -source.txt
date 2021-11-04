@@ -9,10 +9,18 @@ amplify add api
 xtzlocvvnszmatpxfq@adfskj.com
 athymfiqyppjrkdjip@adfskj.com
 
+> TEST Registering
+qogivctmonnvxyojva@mrvpt.com
+wtnrhnjiypujrxizgt@sdvft.com
+
 https://docs.amplify.aws/lib/q/platform/js/
 
 # Amplify Update Schema
-amplify push command
+amplify push 
 
 # Install Lambda dependencies
 amplify function build
+
+# amplify console api
+
+# SES - Amazon Very Simple email Service

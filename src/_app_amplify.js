@@ -3,6 +3,18 @@ var bodyParser = require("body-parser");
 var awsServerlessExpressMiddleware = require("aws-serverless-express/middleware");
 require("dotenv").config();
 var stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+var AWS = require("aws-sdk");
+
+// config {} from email
+const config = {
+  accessKeyId: "AKIARAGIPBV7NC4IHFW7",
+  secretAccessKey: "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",
+  region: "eu-west-1",
+  adminEmail: "dpopescu@adelanto.fr",
+};
+
+// Email sending with SES = Amazon Very Simple email Service
+var ses = new AWS.SES(config);
 
 // declare a new express app
 var app = express();
@@ -17,25 +29,10 @@ app.use(function(req, res, next) {
   next();
 });
 
-/**********************
- * Example get method *
- **********************/
-
-// app.get('/charge', function(req, res) {
-//   // Add your code here
-//   res.json({success: 'get call succeed!', url: req.url});
-// });
-
-// app.get('/charge/*', function(req, res) {
-//   // Add your code here
-//   res.json({success: 'get call succeed!', url: req.url});
-// });
-
 /****************************
  * Example post method *
  ****************************/
-
-app.post("/charge", async (req, res) => {
+const chargeHandler = async (req, res, next) => {
   const { token } = req.body;
   const { currency, amount, description } = req.body.charge;
   try {
@@ -45,11 +42,83 @@ app.post("/charge", async (req, res) => {
       currency,
       description,
     });
-    res.json(charge);
+    if (charge.status === "succeeded") {
+      req.charge = charge;
+      req.description = description;
+      req.email = req.body.email;
+      next();
+    }
+    // res.json(charge);
   } catch (error) {
     res.status(500).json({ error: error });
   }
-});
+};
+
+const convertCentsToDollars = (price) => (price / 100).toFixed(2);
+
+const emailHandler = (req, res) => {
+  const {
+    charge,
+    description,
+    email: { shipped, customerEmail, ownerEmail },
+  } = req;
+
+  ses.sendEmail(
+    {
+      Source: config.adminEmail,
+      ReturnPath: config.adminEmail,
+      Destination: {
+        ToAddresses: [config.adminEmail],
+      },
+      Message: {
+        Subject: {
+          Data: "Order Details - AmplifyAgora",
+        },
+        Body: {
+          Html: {
+            Charset: "UTF-8",
+            Data: `<h3>Order Processed!</h3>
+            <p><span style={{font-weight: bold}}>${description}</span> - $${convertCentsToDollars(
+              charge.amount
+            )}</p>
+            <p>Customer email: <a href="mailto:${customerEmail}">${customerEmail}</a></p>
+            <p>Contact your seller: <a href="mailto:${ownerEmail}">${ownerEmail}</a></p>
+            ${
+              shipped
+                ? `<h4>Mailing Address: </h4>
+              <p>${charge.source.name}</p>
+              <p>${charge.source.address_line1}</p>
+              <p>${charge.source.address_city}, ${
+                    charge.source.address_state
+                  } ${charge.source.address_zip}</p>
+              `
+                : "Emailed product"
+            }
+            <p style="font-style: italic; color: grey">
+            ${
+              shipped
+                ? "Your product will be shipped in 2-3 days"
+                : "Check your verified email for your emaild product"
+            }</p>
+            `,
+          },
+        },
+      },
+    },
+    (err, data) => {
+      if (err) {
+        return res.status(500).json({ error: err });
+      }
+      res.json({
+        message: "Order processed succesfully",
+        charge,
+        data,
+      });
+    }
+  );
+};
+
+app.post("/charge", chargeHandler, emailHandler);
 
 app.post("/charge/*", function(req, res) {
   // Add your code here
